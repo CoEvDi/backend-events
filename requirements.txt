@@ -1,0 +1,7 @@
+aiofiles
+asyncpg
+fastapi
+httpx
+pyyaml
+SQLAlchemy
+uvicorn

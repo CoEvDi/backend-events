@@ -1,1 +1,1 @@
-# backend-events
+# Events Management Micro-service Backend

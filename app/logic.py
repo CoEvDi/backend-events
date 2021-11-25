@@ -1,0 +1,165 @@
+from datetime import datetime, time, date, timedelta
+from sqlalchemy.sql import select
+from sqlalchemy import func, desc
+
+from .database import events, participants
+from .database import _engine
+from .config import cfg
+from .errors import HTTPabort
+
+from pprint import pprint
+
+
+async def create_event(account_id, event):
+    event.start_date = date.fromisoformat(event.start_date)
+    event.end_date = date.fromisoformat(event.end_date)
+    event.start_time = time.fromisoformat(event.start_time)
+    event.end_time = time.fromisoformat(event.end_time)
+
+    if event.start_date > event.end_date:
+        HTTPabort(422, 'End date should be equal or later start date')
+    if (event.start_date == event.end_date
+        and event.start_time > event.end_time):
+        HTTPabort(422, 'End time later start time')
+
+    async with _engine.begin() as conn:
+        query = events.insert().values(
+            created_time=datetime.utcnow(),
+            title=event.title,
+            preview=event.preview,
+            description=event.description,
+            start_date=event.start_date,
+            end_date=event.end_date,
+            start_time=event.start_time,
+            end_time=event.end_time,
+            location=event.location,
+            site_link=event.site_link,
+            additional_info=event.additional_info,
+            guests_info=event.guests_info
+        )
+        result = await conn.execute(query)
+        event_id = result.inserted_primary_key[0]
+
+        query = participants.insert().values(
+            event_id=event_id,
+            account_id=account_id,
+            role='creator',
+            joined_time=datetime.utcnow()
+        )
+        await conn.execute(query)
+
+        return event_id
+
+
+async def get_all_events(offset=None, limit=None):
+    async with _engine.begin() as conn:
+        query = select(events).order_by(
+            desc(events.c.start_date),
+            desc(events.c.start_time)
+        )
+        if offset and limit:
+            if offset < 0 or limit < 1:
+                HTTPabort(422, 'Offset or limit has wrong values')
+            else:
+                query = query.limit(limit).offset(offset)
+
+        result = await conn.execute(query)
+
+        all_events = []
+        count = 0
+        for event in result:
+            count += 1
+            all_events.append({
+                'id': event.id,
+                'title': event.title,
+                'preview': event.preview,
+                'location': event.location,
+                'start_date': event.start_date.isoformat(),
+                'start_time': event.start_time.isoformat()
+            })
+        return {'count': count, 'events': all_events}
+
+
+async def get_event(event_id):
+    async with _engine.begin() as conn:
+        query = select(['*']).select_from(
+            events.join(participants,
+                        participants.c.role == 'creator')
+        ).where(
+            events.c.id == event_id
+        )
+        result = await conn.execute(query)
+        event = result.first()
+        if not event:
+            HTTPabort(404, 'No event with this id')
+
+        query = select(func.count(participants.c.participation_id)).where(
+            participants.c.event_id == event_id,
+            participants.c.role == 'viewer'
+        )
+        result = await conn.execute(query)
+        viewers_count = result.fetchone().count
+
+        return {
+            'id': event.id,
+            'title': event.title,
+            'preview': event.preview,
+            'description': event.description,
+            'start_date': event.start_date.isoformat(),
+            'end_date': event.end_date.isoformat(),
+            'start_time': event.start_time.isoformat(),
+            'end_time': event.end_time.isoformat(),
+            'location': event.location,
+            'site_link': event.site_link,
+            'additional_info': event.additional_info,
+            'guests_info': event.guests_info,
+            'created_time': event.created_time.isoformat(),
+            'creator_id': event.account_id,
+            'viewers_count': viewers_count
+        }
+
+
+async def check_permission(account_id, account_role, event_id):
+    status = 'user'
+    if account_role in ('admin', 'moderator'):
+        status = 'staff'
+
+    async with _engine.begin() as conn:
+        query = select(events).where(
+            events.c.id == event_id
+        )
+        result = await conn.execute(query)
+        event = result.first()
+        if not event:
+            HTTPabort(404, 'No event with this id')
+
+        query = select(participants).where(
+            participants.c.event_id == event_id,
+            participants.c.account_id == account_id,
+        )
+        result = await conn.execute(query)
+        participation = result.first()
+
+        part = ''
+        if participation:
+            part = participation.role
+
+        return (status, part)
+
+
+async def join_event(account_id, event_id, role):
+    async with _engine.begin() as conn:
+        query = participants.insert().values(
+            event_id=event_id,
+            account_id=account_id,
+            role=role,
+            joined_time=datetime.utcnow()
+        )
+        await conn.execute(query)
+
+
+async def leave_event(account_id, event_id):
+    async with _engine.begin() as conn:
+        conn.execute(participation.delete().where(
+            participation.c.account_id == account_id
+        ))
