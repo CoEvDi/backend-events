@@ -15,3 +15,15 @@ class InputEvent(BaseModel):
     additional_info: str
     guests_info: str
 
+class EditedEvent(BaseModel):
+    title: Optional[str] = None
+    preview: Optional[str] = None
+    description: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    location: Optional[str] = None
+    site_link: Optional[str] = None
+    additional_info: Optional[str] = None
+    guests_info: Optional[str] = None

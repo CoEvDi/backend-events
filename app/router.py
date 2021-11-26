@@ -39,6 +39,21 @@ async def get_event(event_id: int):
     return HTTPanswer(200, data)
 
 
+@router.put('/event/{event_id}/edit')
+async def edit_event(event_id: int,
+                     event_data: schemas.EditedEvent,
+                     current_user = Depends(auth_required)):
+    service_status, participation = await logic.check_permission(current_user,
+                                                                 event_id)
+    if service_status == 'user':
+        if not participation:
+            HTTPabort(409, 'Not a part of this event')
+        if participation == 'viewer':
+            HTTPabort(403, 'Denied permission for edit event')
+    await logic.edit_event(event_id, event_data)
+    return HTTPanswer(200, 'Successfully edited')
+
+
 @router.get('/event/{event_id}/join')
 async def join_event(event_id: int,
                      current_user = Depends(auth_required)):
@@ -58,8 +73,8 @@ async def leave_event(event_id: int,
                                                     current_user.role,
                                                     event_id)
     if not participation:
-        HTTPabort(409, f'Not a part of this event')
+        HTTPabort(409, 'Not a part of this event')
     if participation == 'manager':
-        HTTPabort(400, "Can't leave event without creator aprovement")
+        HTTPabort(409, "Can't leave event without creator aprovement")
     await logic.leave_event(current_user.account_id, event_id)
     return HTTPanswer(200, 'Successfully leaved')

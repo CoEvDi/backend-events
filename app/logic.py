@@ -7,14 +7,24 @@ from .database import _engine
 from .config import cfg
 from .errors import HTTPabort
 
-from pprint import pprint
+
+def get_datetimes(event):
+    try:
+        if event.start_date:
+            event.start_date = date.fromisoformat(event.start_date)
+        if event.end_date:
+            event.end_date = date.fromisoformat(event.end_date)
+        if event.start_time:
+            event.start_time = time.fromisoformat(event.start_time)
+        if event.end_time:
+            event.end_time = time.fromisoformat(event.end_time)
+    except ValueError:
+        HTTPabort(422, 'Wrong date or time string(s)')
+    return event
 
 
 async def create_event(account_id, event):
-    event.start_date = date.fromisoformat(event.start_date)
-    event.end_date = date.fromisoformat(event.end_date)
-    event.start_time = time.fromisoformat(event.start_time)
-    event.end_time = time.fromisoformat(event.end_time)
+    event = get_datetimes(event)
 
     if event.start_date > event.end_date:
         HTTPabort(422, 'End date should be equal or later start date')
@@ -119,9 +129,24 @@ async def get_event(event_id):
         }
 
 
-async def check_permission(account_id, account_role, event_id):
+async def edit_event(event_id, event_data):
+    event_data = get_datetimes(event_data)
+    update_data = {}
+    for key, value in event_data:
+        if value:
+            update_data[key] = value
+    async with _engine.begin() as conn:
+        query = events.update().where(
+            events.c.id == event_id
+        ).values(
+            update_data
+        )
+        await conn.execute(query)
+
+
+async def check_permission(current_user, event_id):
     status = 'user'
-    if account_role in ('admin', 'moderator'):
+    if current_user.role in ('admin', 'moderator'):
         status = 'staff'
 
     async with _engine.begin() as conn:
@@ -135,7 +160,7 @@ async def check_permission(account_id, account_role, event_id):
 
         query = select(participants).where(
             participants.c.event_id == event_id,
-            participants.c.account_id == account_id,
+            participants.c.account_id == current_user.account_id,
         )
         result = await conn.execute(query)
         participation = result.first()
