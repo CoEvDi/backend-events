@@ -4,6 +4,7 @@ from typing import Optional, List
 
 from . import schemas
 from . import logic
+from .config import cfg
 from .utils import auth_required
 
 
@@ -15,6 +16,11 @@ def HTTPanswer(status_code, description):
         status_code=status_code,
         content={'content': description},
     )
+
+
+@router.get('/version')
+async def version():
+    return HTTPanswer(200, f'Current version - {cfg.VERSION}')
 
 
 # external routes for manage events

@@ -1,3 +1,4 @@
+import sys
 from fastapi import FastAPI
 
 from .config import YamlConfigManager
@@ -16,7 +17,7 @@ async def startup():
 
     from . import database
     await database.check_database()
-    if cfg.STARTUP_DB_ACTION:
+    if cfg.STARTUP_DB_ACTION or 'pytest' in sys.modules:
         await database.recreate_tables()
 
     from .router import router
@@ -26,4 +27,4 @@ async def startup():
 @app.on_event('shutdown')
 async def shutdown():
     from .database import _engine
-    _engine.dispose()
+    await _engine.dispose()

@@ -31,21 +31,12 @@ async def create_event(account_id, event):
     if (event.start_date == event.end_date
         and event.start_time > event.end_time):
         HTTPabort(422, 'End time later start time')
+    event_data = event.dict()
+    event_data['created_time'] = datetime.utcnow()
 
     async with _engine.begin() as conn:
         query = events.insert().values(
-            created_time=datetime.utcnow(),
-            title=event.title,
-            preview=event.preview,
-            description=event.description,
-            start_date=event.start_date,
-            end_date=event.end_date,
-            start_time=event.start_time,
-            end_time=event.end_time,
-            location=event.location,
-            site_link=event.site_link,
-            additional_info=event.additional_info,
-            guests_info=event.guests_info
+            event_data
         )
         result = await conn.execute(query)
         event_id = result.inserted_primary_key[0]
