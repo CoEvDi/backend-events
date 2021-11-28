@@ -10,9 +10,6 @@ from testsuite import create_event
 from testsuite import get_event
 
 
-client = TestClient(app)
-
-
 #def teardown_function(function):
 #    time.sleep(1)
 
