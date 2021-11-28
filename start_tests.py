@@ -2,12 +2,14 @@
 import pytest
 import asyncio
 
-from fastapi.testclient import TestClient
+
 #from httpx import AsyncClient
 
 from app import app
+from testsuite import service
 from testsuite import create_event
 from testsuite import get_event
+from testsuite import get_all_events
 
 
 #def teardown_function(function):
@@ -27,9 +29,19 @@ pytestmark = pytest.mark.asyncio
 def test_get_version_and_perfornm_on_startup_fastapi_event(capsys):
     #with capsys.disabled():
     #    print('some text')
-    with TestClient(app) as client:
-        response = client.get("/version")
-        assert response.status_code == 200
+    service.get_version(app)
+
+
+async def test_service_404_route_not_found():
+    await service.wrong_route_404(app)
+
+
+async def test_service_405_method_not_allowed():
+    await service.wrong_method_405(app)
+
+
+async def test_get_all_events_200_no_events():
+    await get_all_events.no_events_200(app)
 
 
 async def test_create_event_401_missing_header():
@@ -56,9 +68,17 @@ async def test_create_event_ok():
     await create_event.ok_201(app)
 
 
+async def test_get_event_404_not_found():
+    await get_event.not_found_404(app)
+
+
 async def test_get_event_ok():
     await get_event.ok_200(app)
 
 
-async def test_get_event_404_not_found():
-    await get_event.not_found_404(app)
+async def test_get_all_events_200_one_event():
+    await get_all_events.one_event_200(app)
+
+
+async def test_get_all_events_422_wrong_offset_or_limit():
+    await get_all_events.wrong_offet_or_limit_422(app)
