@@ -1,8 +1,6 @@
 #import time
 import pytest
 import asyncio
-
-
 #from httpx import AsyncClient
 
 from app import app
@@ -80,5 +78,25 @@ async def test_get_all_events_200_one_event():
     await get_all_events.one_event_200(app)
 
 
-async def test_get_all_events_422_wrong_offset_or_limit():
-    await get_all_events.wrong_offet_or_limit_422(app)
+async def test_get_all_events_422_wrong_limit():
+    await get_all_events.wrong_limit_422(app)
+
+
+async def test_get_all_events_422_wrong_offset():
+    await get_all_events.wrong_offset_422(app)
+
+
+async def test_create_events_5_ok():
+    await create_event.ok_5_201(app)
+
+
+async def test_get_all_events_200_all_events():
+    await get_all_events.all_events_200(app)
+
+
+async def test_get_all_events_200_last_event():
+    await get_all_events.last_event_200(app)
+
+
+async def test_get_all_events_200_middle_events():
+    await get_all_events.middle_events_200(app)

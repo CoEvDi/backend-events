@@ -58,12 +58,16 @@ async def get_all_events(offset=None, limit=None):
             desc(events.c.start_date),
             desc(events.c.start_time)
         )
-        if offset and limit:
-            if offset < 0 or limit < 1:
-                HTTPabort(422, 'Offset or limit has wrong values')
+        if limit is not None:
+            if limit < 1:
+                HTTPabort(422, 'Limit lower than 1')
             else:
-                query = query.limit(limit).offset(offset)
-
+                query = query.limit(limit)
+        if offset is not None:
+            if offset < 0:
+                HTTPabort(422, 'Offset lower than 0')
+            else:
+                query = query.offset(offset)
         result = await conn.execute(query)
 
         all_events = []

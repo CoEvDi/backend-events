@@ -1,12 +1,12 @@
 from httpx import AsyncClient
 
 from . import exclude_dict_keys, replace_dict_kyedata
-from .events_data import header_user1
-from .events_data import input_event1
+from .datasets.data_headers import *
+from .datasets.data_events_input import *
 
 
 async def missing_header_401(app):
-    async with AsyncClient(app=app, base_url="http://localhost:8003") as ac:
+    async with AsyncClient(app=app, base_url="http://localhost") as ac:
         response = await ac.post(
             "/event",
             headers=replace_dict_kyedata(
@@ -24,14 +24,14 @@ async def missing_header_401(app):
 
 
 async def missing_field_422(app):
-    async with AsyncClient(app=app, base_url="http://localhost:8003") as ac:
+    async with AsyncClient(app=app, base_url="http://localhost") as ac:
         response = await ac.post(
             "/event",
             headers=header_user1,
             json=replace_dict_kyedata(
                 input_event1,
                 [
-                    ('start_date', ('startdate', '2000-01-01'))
+                    ('start_date', ('startdate', '2000-05-01'))
                 ]
             )
         )
@@ -51,7 +51,7 @@ async def missing_field_422(app):
 
 
 async def wrong_datetime_422(app):
-    async with AsyncClient(app=app, base_url="http://localhost:8003") as ac:
+    async with AsyncClient(app=app, base_url="http://localhost") as ac:
         response = await ac.post(
             "/event",
             headers=header_user1,
@@ -69,14 +69,14 @@ async def wrong_datetime_422(app):
 
 
 async def start_date_more_than_end_422(app):
-    async with AsyncClient(app=app, base_url="http://localhost:8003") as ac:
+    async with AsyncClient(app=app, base_url="http://localhost") as ac:
         response = await ac.post(
             "/event",
             headers=header_user1,
             json=replace_dict_kyedata(
                 input_event1,
                 [
-                    ('start_date', ('start_date', '2000-01-02'))
+                    ('start_date', ('start_date', '2000-05-02'))
                 ]
             )
         )
@@ -87,7 +87,7 @@ async def start_date_more_than_end_422(app):
 
 
 async def start_time_more_than_end_422(app):
-    async with AsyncClient(app=app, base_url="http://localhost:8003") as ac:
+    async with AsyncClient(app=app, base_url="http://localhost") as ac:
         response = await ac.post(
             "/event",
             headers=header_user1,
@@ -105,7 +105,7 @@ async def start_time_more_than_end_422(app):
 
 
 async def ok_201(app):
-    async with AsyncClient(app=app, base_url="http://localhost:8003") as ac:
+    async with AsyncClient(app=app, base_url="http://localhost") as ac:
         response = await ac.post(
             "/event",
             headers=header_user1,
@@ -115,3 +115,47 @@ async def ok_201(app):
         assert response.json() == {
             'content': 1
         }
+
+
+async def ok_5_201(app):
+    async with AsyncClient(app=app, base_url="http://localhost") as ac:
+        # User2 create Event2
+        response = await ac.post(
+            "/event",
+            headers=header_user2,
+            json=input_event2
+        )
+        assert response.status_code == 201
+        assert response.json() == {'content': 2}
+        # User2 create Event3
+        response = await ac.post(
+            "/event",
+            headers=header_user2,
+            json=input_event3
+        )
+        assert response.status_code == 201
+        assert response.json() == {'content': 3}
+        # User1 create Event4
+        response = await ac.post(
+            "/event",
+            headers=header_user1,
+            json=input_event4
+        )
+        assert response.status_code == 201
+        assert response.json() == {'content': 4}
+        # User3 create Event5
+        response = await ac.post(
+            "/event",
+            headers=header_user3,
+            json=input_event5
+        )
+        assert response.status_code == 201
+        assert response.json() == {'content': 5}
+        # User4 create Event6
+        response = await ac.post(
+            "/event",
+            headers=header_user4,
+            json=input_event6
+        )
+        assert response.status_code == 201
+        assert response.json() == {'content': 6}

@@ -9,7 +9,7 @@ def get_version(app):
 
 
 async def wrong_route_404(app):
-    async with AsyncClient(app=app, base_url="http://localhost:8003") as ac:
+    async with AsyncClient(app=app, base_url="http://localhost") as ac:
         response = await ac.post(
             "/wrong_route"
         )
@@ -20,7 +20,7 @@ async def wrong_route_404(app):
 
 
 async def wrong_method_405(app):
-    async with AsyncClient(app=app, base_url="http://localhost:8003") as ac:
+    async with AsyncClient(app=app, base_url="http://localhost") as ac:
         response = await ac.post(
             "/events/all"
         )
